@@ -9,6 +9,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/AryaJayadi/SupplyChain_application-gateway/dto"
 	"github.com/hyperledger/fabric-gateway/pkg/client"
 	"github.com/hyperledger/fabric-gateway/pkg/hash"
 	"github.com/hyperledger/fabric-gateway/pkg/identity"
@@ -81,6 +82,8 @@ func main() {
 	contract := network.GetContract(chaincodeName)
 
 	initLedger(contract)
+	getAllOrganizations(contract)
+	createBatch(contract)
 }
 
 // newGrpcConnection creates a gRPC connection to the Gateway server.
@@ -161,8 +164,6 @@ func readFirstFile(dirPath string) ([]byte, error) {
 	return os.ReadFile(path.Join(dirPath, fileNames[0]))
 }
 
-// This type of transaction would typically only be run once by an application the first time it was started after its
-// initial deployment. A new version of the chaincode deployed later would likely not need to run an "init" function.
 func initLedger(contract *client.Contract) {
 	fmt.Printf("\n--> Submit Transaction: InitLedger, function creates the initial set of assets on the ledger \n")
 
@@ -172,6 +173,40 @@ func initLedger(contract *client.Contract) {
 	}
 
 	fmt.Printf("*** Transaction committed successfully\n")
+}
+
+func getAllOrganizations(contract *client.Contract) {
+	fmt.Printf("\n--> Evaluate Transaction: GetAllOrganizations, function returns all the current organizations on the ledger \n")
+
+	result, err := contract.EvaluateTransaction("GetAllOrganizations")
+	if err != nil {
+		panic(fmt.Errorf("failed to evaluate transaction: %w", err))
+	}
+
+	fmt.Printf("*** Result: %s\n", formatJSON(result))
+}
+
+func createBatch(contract *client.Contract) {
+	fmt.Printf("\n--> Submit Transaction: CreateAsset, creates new asset with ID, Color, Size, Owner and AppraisedValue arguments \n")
+
+	createBatch := dto.CreateBatch{
+		Amount:     5,
+		DrugName:   "Paracetamol",
+		ExpiryDate: time.Now().Add(24 * time.Hour),
+		ID:         "B001",
+	}
+
+	createBatchJSON, err := json.Marshal(createBatch)
+	if err != nil {
+		panic(fmt.Errorf("failed to marshal createBatch: %w", err))
+	}
+
+	result, err := contract.SubmitTransaction("CreateAsset", string(createBatchJSON))
+	if err != nil {
+		panic(fmt.Errorf("failed to submit transaction: %w", err))
+	}
+
+	fmt.Printf("*** Transaction committed successfully: %s\n", formatJSON(result))
 }
 
 // Format JSON data
